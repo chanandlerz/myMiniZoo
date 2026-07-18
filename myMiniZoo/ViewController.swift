@@ -38,6 +38,7 @@ class ViewController: UIViewController, ARSessionDelegate {
         
         let configuration = ARWorldTrackingConfiguration()
         configuration.planeDetection = [.horizontal]
+        configuration.frameSemantics.insert(.personSegmentationWithDepth)
         arView.session.run(configuration)
         
         do {
