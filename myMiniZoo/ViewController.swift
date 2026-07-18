@@ -12,8 +12,12 @@ import ARKit
 class ViewController: UIViewController, ARSessionDelegate {
     
     var arView: ARView!
+    
     var lioness: Entity!
-    var didPlaceLioness = false
+    var goat: Entity!
+    var wolf: Entity!
+    
+    var didPlaceAnimals = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -39,8 +43,15 @@ class ViewController: UIViewController, ARSessionDelegate {
         do {
             lioness = try ModelEntity.load(named: "lioness")
             print("lioness loaded")
+            lioness.scale = [0.005,0.005,0.005]
             
-            lioness.scale = [0.01,0.01,0.01]
+            goat = try ModelEntity.load(named: "goat")
+            print("goat loaded")
+            goat.scale = [0.005,0.005,0.005]
+            
+            wolf = try ModelEntity.load(named: "wolf")
+            print("wolf loaded")
+            wolf.scale = [0.005,0.005,0.005]
                         
         } catch {
             fatalError("Failed to load assets: \(error)")
@@ -48,15 +59,15 @@ class ViewController: UIViewController, ARSessionDelegate {
     }
     
     func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
-        tryPlaceLioness(with: anchors)
+        tryPlaceAnimals(with: anchors)
     }
     
     func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
-        tryPlaceLioness(with: anchors)
+        tryPlaceAnimals(with: anchors)
     }
     
-    func tryPlaceLioness(with anchors: [ARAnchor]) {
-        guard !didPlaceLioness else { return }
+    func tryPlaceAnimals(with anchors: [ARAnchor]) {
+        guard !didPlaceAnimals else { return }
         
         for anchor in anchors {
             guard let planeAnchor = anchor as? ARPlaneAnchor,
@@ -69,28 +80,38 @@ class ViewController: UIViewController, ARSessionDelegate {
             
             let rectangleMesh = MeshResource.generatePlane(width: width, depth: depth)
             var material = SimpleMaterial()
-            material.color = .init(tint: .systemIndigo.withAlphaComponent(0.5))
+            material.color = .init(tint: .green.withAlphaComponent(0.5))
             
             let rectangleEntity = ModelEntity(mesh: rectangleMesh, materials: [material])
             
             let realWorldAnchor = AnchorEntity(anchor: planeAnchor)
             realWorldAnchor.addChild(rectangleEntity)
             
-            let bounds = lioness.visualBounds(relativeTo: nil)
-            print("min.y: \(bounds.min.y), max.y: \(bounds.max.y)")
-            lioness.position = [0, 0, 0]
-//            lioness.position = [0,0,0]
+            
+            placeAnimal(lioness, at: [-0.5, 0, 1], on: rectangleEntity)
+            placeAnimal(goat, at: [0, 0, 0], on: rectangleEntity)
+            placeAnimal(wolf, at: [0.5, 0, -1], on: rectangleEntity)
+
             rectangleEntity.addChild(lioness)
             print("realWorldAnchor world position: \(realWorldAnchor.position(relativeTo: nil))")
             print("rectangleEntity world position: \(rectangleEntity.position(relativeTo: nil))")
-            print("lioness world position: \(lioness.position(relativeTo: nil))")
-            print("lioness local position: \(lioness.position)")
             
             arView.scene.addAnchor(realWorldAnchor)
-            didPlaceLioness = true
+            didPlaceAnimals = true
             break
             
         }
+    }
+    
+    func placeAnimal(_ animal: Entity, at offset: SIMD3<Float>, on parent: Entity) {
+        let bounds = animal.visualBounds(relativeTo: parent)
+        animal.position = [offset.x, offset.y, offset.z]
+        parent.addChild(animal)
+        
+        print("")
+        print("\(animal.name) world position: \(animal.position(relativeTo: nil))")
+        print("\(animal.name) local position: \(animal.position)")
+        print("\(animal.name) bounds: \(bounds)")
     }
     
     
