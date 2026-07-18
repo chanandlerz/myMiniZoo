@@ -13,9 +13,11 @@ class ViewController: UIViewController, ARSessionDelegate {
     
     var arView: ARView!
     
-    var lioness: Entity!
+    var lioness:Entity!
     var goat: Entity!
     var wolf: Entity!
+    
+    var goat_model: ModelEntity!
     
     var didPlaceAnimals = false
     
@@ -39,6 +41,7 @@ class ViewController: UIViewController, ARSessionDelegate {
         let configuration = ARWorldTrackingConfiguration()
         configuration.planeDetection = [.horizontal]
         configuration.frameSemantics.insert(.personSegmentationWithDepth)
+        configuration.environmentTexturing = .automatic
         arView.session.run(configuration)
         
         do {
@@ -46,13 +49,34 @@ class ViewController: UIViewController, ARSessionDelegate {
             print("lioness loaded")
             lioness.scale = [0.005,0.005,0.005]
             
-            goat = try ModelEntity.load(named: "goat")
-            print("goat loaded")
-            goat.scale = [0.005,0.005,0.005]
-            
             wolf = try ModelEntity.load(named: "wolf")
             print("wolf loaded")
             wolf.scale = [0.005,0.005,0.005]
+
+            goat_model = try ModelEntity.loadModel(named: "goat")
+            print("goat loaded")
+            goat_model.scale = [0.005,0.005,0.005]
+            
+            if var modelComponent = goat_model.model {
+                modelComponent.materials = modelComponent.materials.map { originalMaterial in
+                    
+                    var reflectiveMaterial = PhysicallyBasedMaterial()
+                    
+                    reflectiveMaterial.metallic = .init(floatLiteral: 1.0)
+                    reflectiveMaterial.roughness = .init(floatLiteral: 0.0)
+                    
+                    reflectiveMaterial.baseColor = .init(tint: .white)
+                    
+                    return reflectiveMaterial
+                }
+                
+                goat_model.model = modelComponent
+            }
+            
+            goat = goat_model
+            
+            
+
                         
         } catch {
             fatalError("Failed to load assets: \(error)")
@@ -80,14 +104,20 @@ class ViewController: UIViewController, ARSessionDelegate {
             let depth = planeAnchor.planeExtent.height
             
             let rectangleMesh = MeshResource.generatePlane(width: width, depth: depth)
-            var material = SimpleMaterial()
-            material.color = .init(tint: .green.withAlphaComponent(0.5))
+            var material = PhysicallyBasedMaterial()
+//            material.color = .init(tint: .green.withAlphaComponent(0.5))
+            
+            material.baseColor = .init(tint: .white)
+            material.metallic = .init(floatLiteral: 1.0)
+            material.roughness = .init(floatLiteral: 0.01)
             
             let rectangleEntity = ModelEntity(mesh: rectangleMesh, materials: [material])
             
             let realWorldAnchor = AnchorEntity(anchor: planeAnchor)
             realWorldAnchor.addChild(rectangleEntity)
             
+//            goat_model.model?.materials = [material]
+//            goat = goat_model
             
             placeAnimal(lioness, at: [-0.5, 0, 1], on: rectangleEntity)
             placeAnimal(goat, at: [0, 0, 0], on: rectangleEntity)
@@ -113,9 +143,5 @@ class ViewController: UIViewController, ARSessionDelegate {
         print("\(animal.name) world position: \(animal.position(relativeTo: nil))")
         print("\(animal.name) local position: \(animal.position)")
         print("\(animal.name) bounds: \(bounds)")
-    }
-    
-    
-    
-    
+    }    
 }
