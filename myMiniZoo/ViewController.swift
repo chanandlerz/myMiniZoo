@@ -21,6 +21,8 @@ class ViewController: UIViewController, ARSessionDelegate {
     
     var didPlaceAnimals = false
     
+    var audioName: String!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -91,7 +93,7 @@ class ViewController: UIViewController, ARSessionDelegate {
         tryPlaceAnimals(with: anchors)
     }
     
-    func tryPlaceAnimals(with anchors: [ARAnchor]) {
+    func tryPlaceAnimals(with anchors: [ARAnchor], audioName: String? = nil) {
         guard !didPlaceAnimals else { return }
         
         for anchor in anchors {
@@ -119,9 +121,9 @@ class ViewController: UIViewController, ARSessionDelegate {
 //            goat_model.model?.materials = [material]
 //            goat = goat_model
             
-            placeAnimal(lioness, at: [-0.5, 0, 1], on: rectangleEntity)
-            placeAnimal(goat, at: [0, 0, 0], on: rectangleEntity)
-            placeAnimal(wolf, at: [0.5, 0, -1], on: rectangleEntity)
+            placeAnimal(lioness, at: [-2, 0, 2], on: rectangleEntity, audioName: "lion")
+            placeAnimal(goat, at: [0, 0, 0], on: rectangleEntity, audioName: "goat")
+            placeAnimal(wolf, at: [2, 0, -2], on: rectangleEntity, audioName: "wolves")
 
             rectangleEntity.addChild(lioness)
             print("realWorldAnchor world position: \(realWorldAnchor.position(relativeTo: nil))")
@@ -134,14 +136,32 @@ class ViewController: UIViewController, ARSessionDelegate {
         }
     }
     
-    func placeAnimal(_ animal: Entity, at offset: SIMD3<Float>, on parent: Entity) {
+    func placeAnimal(_ animal: Entity, at offset: SIMD3<Float>, on parent: Entity, audioName: String) {
         let bounds = animal.visualBounds(relativeTo: parent)
         animal.position = [offset.x, offset.y, offset.z]
         parent.addChild(animal)
+        animal.addChild(createSpatialAudio(audioName: audioName))
         
         print("")
         print("\(animal.name) world position: \(animal.position(relativeTo: nil))")
         print("\(animal.name) local position: \(animal.position)")
         print("\(animal.name) bounds: \(bounds)")
-    }    
+    }
+    
+    func createSpatialAudio(audioName:String) -> Entity {
+        let audioSource = Entity()
+        
+        audioSource.spatialAudio = SpatialAudioComponent(gain: +2, directLevel: .zero, reverbLevel: .zero, directivity: .beam(focus: 0.5), distanceAttenuation: .rolloff(factor: 1.0))
+        
+        do {
+            let resource = try AudioFileResource.load(named: audioName, configuration: .init(shouldLoop: true))
+            
+            audioSource.playAudio(resource)
+        } catch {
+            print("Error loading audio file: \(error.localizedDescription)")
+        }
+        
+        return audioSource
+        
+    }
 }
